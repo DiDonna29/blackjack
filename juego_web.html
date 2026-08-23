@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Casino BlackJack POO - Versión Web Sin Instalación</title>
+    <!-- Carga de Tailwind CSS para diseño visual premium -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Carga de Brython para ejecutar Python directamente en el navegador -->
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/brython/3.12.0/brython.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/brython/3.12.0/brython_stdlib.min.js"></script>
+    <style>
+        body {
+            background: radial-gradient(circle, #106637 0%, #07351c 100%);
+        }
+        .carta-sombra {
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+    </style>
+</head>
+<body class="min-h-screen text-white font-sans" onload="brython(1)">
+
+    <!-- Encabezado Principal -->
+    <header class="py-4 bg-black bg-opacity-40 border-b border-green-700 shadow-md">
+        <div class="max-w-6xl mx-auto px-4 flex justify-between items-center">
+            <h1 class="text-xl md:text-2xl font-extrabold tracking-widest text-green-400">
+                ♠ ♥ BLACKJACK POO WEB ♣ ♦
+            </h1>
+            <div class="flex items-center gap-3 flex-wrap">
+                <button id="btn-reiniciar-juego-completo" class="hidden px-3 py-1.5 bg-red-950 hover:bg-red-900 border border-red-500 rounded text-xs text-red-200 font-bold transition duration-200 shadow">
+                    ⚙️ Reiniciar Juego
+                </button>
+                <button id="btn-cerrar-mesa" class="hidden px-3 py-1.5 bg-gray-900 hover:bg-gray-800 border border-gray-600 rounded text-xs text-gray-200 font-bold transition duration-200 shadow">
+                    🚪 Cerrar Mesa
+                </button>
+                <span class="px-3 py-1 bg-green-900 border border-green-500 rounded text-xs text-green-300 font-mono">
+                    Ejecutando Python en Navegador (Brython)
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Pantalla de Despedida para el cierre de mesa -->
+    <div id="pantalla-despedida" class="hidden fixed inset-0 bg-black bg-opacity-95 z-50 flex flex-col justify-center items-center text-center p-6">
+        <div class="max-w-md bg-green-950 bg-opacity-80 p-8 rounded-2xl border-2 border-green-500 shadow-2xl space-y-6">
+            <h2 class="text-3xl font-black text-green-400 tracking-wider">MESA CERRADA</h2>
+            <p class="text-sm text-gray-300">
+                ¡Gracias por jugar en el Casino BlackJack! Has retirado tus fondos de la mesa.
+            </p>
+            <div class="text-6xl my-4">🃏♠️♥️</div>
+            <p class="text-xs text-gray-500">
+                Puedes cerrar esta pestaña de forma segura o hacer clic en el botón de abajo para reabrir la mesa.
+            </p>
+            <button onclick="window.location.reload()" class="w-full bg-green-500 hover:bg-green-600 text-black font-extrabold py-3 px-6 rounded-xl transition duration-300 transform hover:scale-105 shadow-lg text-sm">
+                REABRIR NUEVA MESA
+            </button>
+        </div>
+    </div>
+
+    <main class="max-w-6xl mx-auto px-4 py-8">
+        
+        <!-- Cuadro de Alerta de Advertencia Visual (En Español y Rojo) -->
+        <div id="contenedor-alerta" class="hidden mb-6 max-w-lg mx-auto bg-red-950 border-2 border-red-500 text-red-200 px-4 py-3 rounded-lg relative shadow-xl" role="alert">
+            <strong class="font-bold flex items-center text-sm md:text-base text-red-400">
+                <span class="mr-2">⚠️</span> [ADVERTENCIA] ENTRADA NO VÁLIDA
+            </strong>
+            <span id="mensaje-alerta" class="block sm:inline mt-1 text-xs md:text-sm">Mensaje de error</span>
+        </div>
+
+        <!-- FASE 1: CONFIGURACIÓN INICIAL DE LA MESA -->
+        <section id="sec-configuracion" class="bg-black bg-opacity-50 p-6 rounded-2xl border border-green-950 shadow-2xl max-w-xl mx-auto">
+            <h2 class="text-lg font-bold mb-4 border-b border-green-900 pb-2 text-green-400">Configuración de la Mesa</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-semibold mb-1">Número de Jugadores (1-5)</label>
+                    <input id="config-num-jugadores" type="number" min="1" max="5" value="1" 
+                           class="w-full bg-green-950 border border-green-700 rounded px-3 py-2 text-white focus:outline-none focus:border-green-400" />
+                </div>
+                
+                <div id="contenedor-nombres" class="space-y-2">
+                    <!-- Nombres de los jugadores ingresados dinámicamente -->
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-semibold mb-1">Cantidad de Mazos (1-4)</label>
+                        <input id="config-num-mazos" type="number" min="1" max="4" value="1" 
+                               class="w-full bg-green-950 border border-green-700 rounded px-3 py-2 text-white focus:outline-none focus:border-green-400" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold mb-1">Saldo Inicial ($)</label>
+                        <input id="config-saldo-inicial" type="number" min="10" value="700" 
+                               class="w-full bg-green-950 border border-green-700 rounded px-3 py-2 text-white focus:outline-none focus:border-green-400" />
+                    </div>
+                </div>
+                
+                <button id="btn-iniciar-juego" class="w-full mt-4 bg-green-500 hover:bg-green-600 text-black font-extrabold py-3 px-6 rounded-xl transition duration-300 transform hover:scale-105 shadow-lg text-sm md:text-base">
+                    ABRIR MESA Y JUGAR
+                </button>
+            </div>
+        </section>
+
+        <!-- FASE 2: PANTALLA PRINCIPAL DE LA MESA DE JUEGO -->
+        <section id="sec-juego" class="hidden space-y-8">
+            
+            <!-- MANO DEL CRUPIER -->
+            <div class="bg-black bg-opacity-40 p-6 rounded-2xl border border-green-900 shadow-xl max-w-3xl mx-auto">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="text-lg font-bold text-green-300">Crupier (La Banca)</h3>
+                    <span id="crupier-puntos" class="bg-green-900 px-3 py-1 rounded-full text-xs font-bold font-mono">Puntos: 0</span>
+                </div>
+                <div id="crupier-cartas" class="flex flex-wrap gap-3 justify-center min-h-[120px] items-center">
+                    <!-- Cartas del crupier -->
+                </div>
+            </div>
+
+            <!-- CONTROLES DE TURNO (JUGADOR ACTIVO) -->
+            <div id="controles-turno" class="hidden bg-black bg-opacity-65 p-4 rounded-xl border-2 border-green-500 shadow-2xl max-w-xl mx-auto flex flex-wrap gap-3 justify-center">
+                <div class="w-full text-center mb-1 text-sm font-bold text-green-400">
+                    Turno de: <span id="nombre-jugador-activo" class="text-white uppercase font-black">Pedro</span>
+                </div>
+                <button id="btn-pedir" class="bg-green-600 hover:bg-green-500 text-white font-extrabold px-5 py-2.5 rounded-lg shadow transition transform hover:scale-105 text-sm">Pedir Carta</button>
+                <button id="btn-plantarse" class="bg-yellow-600 hover:bg-yellow-500 text-white font-extrabold px-5 py-2.5 rounded-lg shadow transition transform hover:scale-105 text-sm">Plantarse</button>
+                <button id="btn-doblar" class="bg-blue-600 hover:bg-blue-500 text-white font-extrabold px-5 py-2.5 rounded-lg shadow transition transform hover:scale-105 text-sm">Doblar</button>
+                <button id="btn-rendirse" class="bg-gray-600 hover:bg-gray-500 text-white font-extrabold px-5 py-2.5 rounded-lg shadow transition transform hover:scale-105 text-sm">Rendirse</button>
+            </div>
+
+            <!-- FASE DE APUESTAS -->
+            <div id="controles-apuestas" class="hidden bg-black bg-opacity-50 p-6 rounded-2xl border border-yellow-950 shadow-xl max-w-2xl mx-auto">
+                <h3 class="text-base font-bold mb-4 text-center text-yellow-400">Coloca tu Apuesta para la Ronda</h3>
+                <div id="inputs-apuestas" class="space-y-4">
+                    <!-- Inputs de apuestas dinámicos por jugador -->
+                </div>
+                <button id="btn-confirmar-apuestas" class="w-full mt-6 bg-yellow-500 hover:bg-yellow-600 text-black font-extrabold py-3 px-6 rounded-xl transition duration-300 transform hover:scale-105 text-sm">
+                    CONFIRMAR APUESTAS E INICIAR RONDA
+                </button>
+            </div>
+
+            <!-- BOTÓN JUGAR NUEVA RONDA -->
+            <div id="controles-resultados" class="hidden text-center">
+                <button id="btn-reiniciar-ronda" class="bg-green-500 hover:bg-green-600 text-black font-extrabold px-8 py-4 rounded-xl text-md shadow-2xl transition duration-300 transform hover:scale-105">
+                    JUGAR SIGUIENTE RONDA
+                </button>
+            </div>
+
+            <!-- JUGADORES EN LA MESA -->
+            <div id="contenedor-jugadores" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Paneles de los jugadores -->
+            </div>
+
+        </section>
+
+    </main>
+
+    <footer class="py-6 bg-black bg-opacity-60 border-t border-green-950 text-center text-xs text-gray-500 mt-12">
+        Casino BlackJack POO © 2026 - Lógica Python en el Navegador con Brython
+    </footer>
+
+    <!-- Código de inicialización de inputs JS que no requiere Brython -->
+    <script>
+        document.getElementById('config-num-jugadores').addEventListener('input', actualizarNombresJs);
+        actualizarNombresJs();
+
+        // 1. Validación de número de jugadores en tiempo real (Clampeado estricto)
+        document.getElementById('config-num-jugadores').addEventListener('change', function() {
+            let val = parseInt(this.value);
+            if (isNaN(val) || val < 1) {
+                mostrarAlertaJs("El número de jugadores mínimo es 1.");
+                this.value = 1;
+            } else if (val > 5) {
+                mostrarAlertaJs("La mesa permite un máximo de 5 jugadores.");
+                this.value = 5;
+            }
+            actualizarNombresJs();
+        });
+
+        // 2. Validación de número de mazos en tiempo real
+        document.getElementById('config-num-mazos').addEventListener('change', function() {
+            let val = parseInt(this.value);
+            if (isNaN(val) || val < 1) {
+                mostrarAlertaJs("Se debe jugar con al menos 1 mazo.");
+                this.value = 1;
+            } else if (val > 4) {
+                mostrarAlertaJs("El zapato permite un máximo de 4 mazos.");
+                this.value = 4;
+            }
+        });
+
+        // 3. Validación de saldo inicial mínimo
+        document.getElementById('config-saldo-inicial').addEventListener('change', function() {
+            let val = parseFloat(this.value);
+            if (isNaN(val) || val < 10) {
+                mostrarAlertaJs("El saldo mínimo para ingresar a la mesa es $10.");
+                this.value = 10;
+            }
+        });
+
+        function actualizarNombresJs() {
+            let num = parseInt(document.getElementById('config-num-jugadores').value);
+            if (isNaN(num) || num < 1) num = 1;
+            if (num > 5) num = 5;
+
+            const container = document.getElementById('contenedor-nombres');
+            container.innerHTML = '';
+            for (let i = 0; i < num; i++) {
+                container.innerHTML += `
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-0.5">Nombre Jugador #${i+1}</label>
+                        <input id="nombre-jugador-${i}" type="text" value="Jugador ${i+1}" 
+                               maxlength="12"
+                               class="w-full bg-green-950 border border-green-800 rounded px-3 py-1.5 text-white focus:outline-none focus:border-green-400 text-sm" />
+                    </div>
+                `;
+            }
+        }
+
+        // 4. Validación dinámica de apuestas en tiempo real
+        function validarApuestaJs(input, maxSaldo) {
+            let val = parseFloat(input.value);
+            if (isNaN(val) || val < 1) {
+                mostrarAlertaJs("La apuesta mínima es de $1.");
+                input.value = 1;
+            } else if (val > maxSaldo) {
+                mostrarAlertaJs(`Apuesta excede el saldo de $${maxSaldo.toFixed(2)} del jugador.`);
+                input.value = maxSaldo;
+            }
+        }
+
+        function mostrarAlertaJs(mensaje) {
+            const alerta = document.getElementById('contenedor-alerta');
+            const mensajeEl = document.getElementById('mensaje-alerta');
+            mensajeEl.textContent = mensaje;
+            alerta.classList.remove('hidden');
+            // Desplazar al usuario al tope para ver la alerta si es necesario
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            setTimeout(() => {
+                alerta.classList.add('hidden');
+            }, 4500);
+        }
+    </script>
+
+    <!-- ================================================================= -->
+    <!-- MOTOR EN PYTHON CON TODA LA LÓGICA DEL BLACKJACK POO (BRYTHON)    -->
+    <!-- ================================================================= -->
+    <script type="text/python">
+from browser import document, alert, window
+import random
+
+# ==========================================
+# 1. CLASE CARTA (POO Traducido al Español)
+# ==========================================
+class Carta:
+    INFORMACION_PALOS = {
+        'Corazón': {'simbolo': '♥', 'color': 'text-red-500'},
+        'Diamante': {'simbolo': '♦', 'color': 'text-red-500'},
+        'Trébol': {'simbolo': '♣', 'color': 'text-gray-800'},
+        'Espada': {'simbolo': '♠', 'color': 'text-gray-800'}
+    }
+    
+    def __init__(self, palo: str, valor_nominal: str):
+        self._palo = palo
+        self._valor_nominal = valor_nominal
+
+    @property
+    def palo(self) -> str:
+        return self._palo
+
+    @property
+    def valor_nominal(self) -> str:
+        return self._valor_nominal
+
+    def obtener_valor_numerico(self) -> int:
+        if self._valor_nominal in ['J', 'Q', 'K']:
+            return 10
+        elif self._valor_nominal == 'A':
+            return 11
+        else:
+            return int(self._valor_nominal)
+
+    def obtener_html_carta(self, oculta: bool = False) -> str:
+        """Genera el código HTML para dibujar visualmente la carta en el navegador."""
+        if oculta:
+            return '''
+            <div class="w-20 h-28 bg-gray-800 rounded-xl border-2 border-gray-600 flex flex-col justify-center items-center text-gray-500 font-bold shadow-lg relative select-none">
+                <div class="absolute inset-1 border border-dashed border-gray-700 rounded-lg flex flex-col justify-center items-center bg-gray-900 bg-opacity-40">
+                    <span class="text-[10px]">♠ ♥</span>
+                    <span class="text-md tracking-wider text-gray-400 font-black">B J</span>
+                    <span class="text-[10px]">♣ ♦</span>
+                </div>
+            </div>
+            '''
+        info = self.INFORMACION_PALOS[self._palo]
+        simbolo = info['simbolo']
+        color_clase = info['color']
+        
+        return f'''
+        <div class="w-20 h-28 bg-white text-black rounded-xl border-2 border-gray-200 flex flex-col justify-between p-2 shadow-lg transform hover:-translate-y-1 transition duration-200 relative select-none">
+            <div class="text-xs font-bold flex justify-between items-center {color_clase}">
+                <span>{self._valor_nominal}</span>
+            </div>
+            <div class="text-3xl text-center flex justify-center {color_clase}">{simbolo}</div>
+            <div class="text-xs font-bold flex justify-between items-center rotate-180 {color_clase}">
+                <span>{self._valor_nominal}</span>
+            </div>
+        </div>
+        '''
+
+# ==========================================
+# 2. CLASE BARAJA (POO Traducido al Español)
+# ==========================================
+class Baraja:
+    PALOS = ['Corazón', 'Diamante', 'Trébol', 'Espada']
+    VALORES_NOMINALES = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K']
+    
+    def __init__(self, num_mazos: int = 1):
+        self._num_mazos = num_mazos
+        self._cartas = []
+        self._inicializar_baraja()
+        
+    def _inicializar_baraja(self):
+        self._cartas.clear()
+        for _ in range(self._num_mazos):
+            for palo in self.PALOS:
+                for valor in self.VALORES_NOMINALES:
+                    self._cartas.append(Carta(palo, valor))
+        self.barajar()
+
+    @property
+    def cantidad_cartas(self) -> int:
+        return len(self._cartas)
+
+    def barajar(self):
+        random.shuffle(self._cartas)
+
+    def repartir_carta(self) -> Carta:
+        if not self._cartas:
+            self._inicializar_baraja()
+        carta = self._cartas.pop()
+        
+        # Umbral del 20% para rebarajado automático
+        total_inicial = self._num_mazos * 52
+        if len(self._cartas) < (total_inicial * 0.20):
+            window.mostrarAlertaJs("El zapato de cartas se está agotando. Rebarajando automáticamente...")
+            self._inicializar_baraja()
+            
+        return carta
+
+# ===============================================
+# 3. CLASE PARTICIPANTE (POO Traducido al Español)
+# ===============================================
+class Participante:
+    def __init__(self):
+        self._mano = []
+
+    @property
+    def mano(self) -> list:
+        return list(self._mano)
+
+    @property
+    def puntuacion(self) -> int:
+        return self.calcular_puntuacion()
+
+    def recibir_carta(self, carta: Carta):
+        self._mano.append(carta)
+
+    def limpiar_mano(self):
+        self._mano.clear()
+
+    def calcular_puntuacion(self) -> int:
+        puntuacion = 0
+        cantidad_ases = 0
+        for carta in self._mano:
+            valor = carta.obtener_valor_numerico()
+            if carta.valor_nominal == 'A':
+                cantidad_ases += 1
+            puntuacion += valor
+
+        while puntuacion > 21 and cantidad_ases > 0:
+            puntuacion -= 10
+            cantidad_ases -= 1
+
+        return puntuacion
+
+# ==========================================
+# 4. CLASE JUGADOR (POO Traducido al Español)
+# ==========================================
+class Jugador(Participante):
+    def __init__(self, nombre: str, saldo_inicial: float = 700.0):
+        super().__init__()
+        self._nombre = nombre
+        self._saldo_disponible = float(saldo_inicial)
+        self._apuesta_actual = 0.0
+        self._se_planto = False
+        self._se_rindio = False
+
+    @property
+    def nombre(self) -> str:
+        return self._nombre
+
+    @property
+    def saldo_disponible(self) -> float:
+        return self._saldo_disponible
+
+    @saldo_disponible.setter
+    def saldo_disponible(self, cantidad: float):
+        self._saldo_disponible = float(cantidad) if cantidad >= 0 else 0.0
+
+    @property
+    def apuesta_actual(self) -> float:
+        return self._apuesta_actual
+
+    @apuesta_actual.setter
+    def apuesta_actual(self, cantidad: float):
+        self._apuesta_actual = float(cantidad)
+
+    @property
+    def se_planto(self) -> bool:
+        return self._se_planto
+
+    @se_planto.setter
+    def se_planto(self, valor: bool):
+        self._se_planto = bool(valor)
+
+    @property
+    def se_rindio(self) -> bool:
+        return self._se_rindio
+
+    @se_rindio.setter
+    def se_rindio(self, valor: bool):
+        self._se_rindio = bool(valor)
+
+    def realizar_apuesta(self, cantidad: float) -> bool:
+        if cantidad <= 0 or cantidad > self._saldo_disponible:
+            return False
+        self._saldo_disponible -= cantidad
+        self._apuesta_actual = cantidad
+        self._se_planto = False
+        self._se_rindio = False
+        return True
+
+    def pedir(self, baraja: Baraja) -> Carta:
+        carta = baraja.repartir_carta()
+        self.recibir_carta(carta)
+        return carta
+
+    def plantarse(self):
+        self._se_planto = True
+
+    def doblar(self, baraja: Baraja) -> bool:
+        if self._saldo_disponible < self._apuesta_actual:
+            return False
+        self._saldo_disponible -= self._apuesta_actual
+        self._apuesta_actual *= 2
+        self.pedir(baraja)
+        self.plantarse()
+        return True
+
+    def rendirse(self):
+        self._se_rindio = True
+        self.plantarse()
+
+    def devolver_apuesta(self, factor: float):
+        self._saldo_disponible += self._apuesta_actual * factor
+        self._apuesta_actual = 0.0
+
+    def limpiar_mano(self):
+        super().limpiar_mano()
+        self._apuesta_actual = 0.0
+        self._se_planto = False
+        self._se_rindio = False
+
+# ==========================================
+# 5. CLASE CRUPIER (POO Traducido al Español)
+# ==========================================
+class Crupier(Participante):
+    def debe_pedir(self) -> bool:
+        return self.calcular_puntuacion() < 17
+
+    def jugar_turno(self, baraja: Baraja):
+        while self.debe_pedir():
+            self.recibir_carta(baraja.repartir_carta())
+
+# ===================================================
+# 6. COORDINADOR WEB (Estado y Actualización del DOM)
+# ===================================================
+baraja_global = None
+jugadores_global = []
+crupier_global = None
+indice_jugador_activo = 0
+estado_juego = "configuracion"
+mensajes_resultados = {}
+
+def inicializar_juego(ev):
+    global baraja_global, jugadores_global, crupier_global, estado_juego
+    
+    # Lectura de configuraciones
+    num_jugadores_val = document["config-num-jugadores"].value
+    try:
+        num_jugadores = int(num_jugadores_val)
+        if not (1 <= num_jugadores <= 5):
+            raise ValueError()
+    except ValueError:
+        window.mostrarAlertaJs("El número de jugadores debe ser un número entero entre 1 y 5.")
+        return
+
+    nombres = []
+    for i in range(num_jugadores):
+        input_nombre = document[f"nombre-jugador-{i}"]
+        nombre = input_nombre.value.strip()
+        if not nombre:
+            window.mostrarAlertaJs(f"El nombre del jugador #{i+1} no puede estar vacío.")
+            return
+        nombres.append(nombre)
+
+    num_mazos_val = document["config-num-mazos"].value
+    try:
+        num_mazos = int(num_mazos_val)
+        if not (1 <= num_mazos <= 4):
+            raise ValueError()
+    except ValueError:
+        window.mostrarAlertaJs("La cantidad de mazos en el zapato debe ser un entero entre 1 y 4.")
+        return
+
+    saldo_inicial_val = document["config-saldo-inicial"].value
+    try:
+        saldo_inicial = float(saldo_inicial_val)
+        if saldo_inicial < 10:
+            raise ValueError()
+    except ValueError:
+        window.mostrarAlertaJs("El saldo inicial debe ser de al menos $10.")
+        return
+
+    # Inicializar objetos POO
+    baraja_global = Baraja(num_mazos)
+    crupier_global = Crupier()
+    jugadores_global = [Jugador(nombre, saldo_inicial) for nombre in nombres]
+    
+    estado_juego = "apuestas"
+    actualizar_pantalla()
+
+def enviar_apuestas(ev):
+    global baraja_global, jugadores_global, crupier_global, estado_juego, indice_jugador_activo, mensajes_resultados
+    
+    apuestas = {}
+    jugadores_con_apuesta = 0
+    mensajes_resultados.clear()
+    crupier_global.limpiar_mano()
+
+    for idx, jugador in enumerate(jugadores_global):
+        jugador.limpiar_mano()
+        input_apuesta = document[f"apuesta-input-{idx}"]
+        
+        try:
+            apuesta_val = float(input_apuesta.value)
+            if apuesta_val <= 0:
+                raise ValueError()
+        except ValueError:
+            window.mostrarAlertaJs(f"La apuesta de {jugador.nombre} debe ser un número válido mayor a 0.")
+            return
+
+        if apuesta_val > jugador.saldo_disponible:
+            window.mostrarAlertaJs(f"La apuesta de {jugador.nombre} excede su saldo de ${jugador.saldo_disponible:.2f}.")
+            return
+            
+        jugador.realizar_apuesta(apuesta_val)
+        jugadores_con_apuesta += 1
+
+    # Repartir 2 cartas
+    for _ in range(2):
+        for jugador in jugadores_global:
+            jugador.pedir(baraja_global)
+        crupier_global.recibir_carta(baraja_global.repartir_carta())
+
+    # Determinar primer jugador activo
+    indice_jugador_activo = buscar_siguiente_jugador_activo(0)
+    
+    if indice_jugador_activo is None:
+        finalizar_ronda()
+    else:
+        jugador = jugadores_global[indice_jugador_activo]
+        if jugador.puntuacion == 21:
+            avanzar_jugador()
+        else:
+            estado_juego = "jugando"
+
+    actualizar_pantalla()
+
+def buscar_siguiente_jugador_activo(inicio: int):
+    for i in range(inicio, len(jugadores_global)):
+        if jugadores_global[i].apuesta_actual > 0 and not jugadores_global[i].se_planto:
+            return i
+    return None
+
+def avanzar_jugador():
+    global indice_jugador_activo
+    siguiente = buscar_siguiente_jugador_activo(indice_jugador_activo + 1)
+    if siguiente is None:
+        finalizar_ronda()
+    else:
+        indice_jugador_activo = siguiente
+        if jugadores_global[indice_jugador_activo].puntuacion == 21:
+            avanzar_jugador()
+
+def jugar_accion(ev):
+    global baraja_global, jugadores_global, indice_jugador_activo
+    
+    # Obtener el botón clicado y mapear su acción
+    boton_id = ev.target.id
+    accion = ""
+    if boton_id == "btn-pedir":
+        accion = "pedir"
+    elif boton_id == "btn-plantarse":
+        accion = "plantarse"
+    elif boton_id == "btn-doblar":
+        accion = "doblar"
+    elif boton_id == "btn-rendirse":
+        accion = "rendirse"
+
+    jugador = jugadores_global[indice_jugador_activo]
+
+    if accion == "pedir":
+        jugador.pedir(baraja_global)
+        if jugador.puntuacion >= 21:
+            avanzar_jugador()
+    elif accion == "plantarse":
+        jugador.plantarse()
+        avanzar_jugador()
+    elif accion == "doblar":
+        if jugador.doblar(baraja_global):
+            avanzar_jugador()
+        else:
+            window.mostrarAlertaJs("No tienes suficiente saldo para doblar la apuesta.")
+    elif accion == "rendirse":
+        jugador.rendirse()
+        avanzar_jugador()
+
+    actualizar_pantalla()
+
+def finalizar_ronda():
+    global estado_juego, crupier_global, baraja_global, jugadores_global, mensajes_resultados
+    
+    estado_juego = "resultados"
+    puntos_crupier = crupier_global.puntuacion
+    
+    jugadores_activos = [j for j in jugadores_global if not j.se_rindio and j.puntuacion <= 21]
+    
+    if jugadores_activos:
+        crupier_global.jugar_turno(baraja_global)
+        puntos_crupier = crupier_global.puntuacion
+
+    for jugador in jugadores_global:
+        puntos = jugador.puntuacion
+        apuesta = jugador.apuesta_actual
+        nombre = jugador.nombre
+        
+        if jugador.se_rindio:
+            jugador.devolver_apuesta(0.5)
+            mensajes_resultados[nombre] = f"Rendición. Pierdes ${apuesta*0.5:.2f}. Saldo: ${jugador.saldo_disponible:.2f}"
+        elif puntos > 21:
+            jugador.devolver_apuesta(0.0)
+            mensajes_resultados[nombre] = f"Te pasaste (Bust). Pierdes ${apuesta:.2f}. Saldo: ${jugador.saldo_disponible:.2f}"
+        elif puntos_crupier > 21:
+            es_blackjack = (puntos == 21 and len(jugador.mano) == 2)
+            factor = 2.5 if es_blackjack else 2.0
+            jugador.devolver_apuesta(factor)
+            if es_blackjack:
+                mensajes_resultados[nombre] = f"¡BlackJack Natural! Ganas ${apuesta*1.5:.2f}. Saldo: ${jugador.saldo_disponible:.2f}"
+            else:
+                mensajes_resultados[nombre] = f"¡Ganaste! Crupier se pasó. Ganas ${apuesta:.2f}. Saldo: ${jugador.saldo_disponible:.2f}"
+        else:
+            if puntos > puntos_crupier:
+                es_blackjack = (puntos == 21 and len(jugador.mano) == 2)
+                factor = 2.5 if es_blackjack else 2.0
+                jugador.devolver_apuesta(factor)
+                if es_blackjack:
+                    mensajes_resultados[nombre] = f"¡BlackJack Natural! Ganas ${apuesta*1.5:.2f}. Saldo: ${jugador.saldo_disponible:.2f}"
+                else:
+                    mensajes_resultados[nombre] = f"¡Ganaste! Ganas ${apuesta:.2f}. Saldo: ${jugador.saldo_disponible:.2f}"
+            elif puntos == puntos_crupier:
+                jugador.devolver_apuesta(1.0)
+                mensajes_resultados[nombre] = f"Empate (Push). Recuperas tu apuesta de ${apuesta:.2f}. Saldo: ${jugador.saldo_disponible:.2f}"
+            else:
+                jugador.devolver_apuesta(0.0)
+                mensajes_resultados[nombre] = f"Perdiste. Crupier tiene {puntos_crupier} puntos. Pierdes ${apuesta:.2f}. Saldo: ${jugador.saldo_disponible:.2f}"
+
+def reiniciar_ronda(ev):
+    global estado_juego, jugadores_global
+    
+    # Filtrar sólo los jugadores que mantengan saldo disponible
+    jugadores_global = [j for j in jugadores_global if j.saldo_disponible > 0]
+    
+    if not jugadores_global:
+        estado_juego = "configuracion"
+    else:
+        estado_juego = "apuestas"
+        
+    actualizar_pantalla()
+
+def reiniciar_juego_completo(ev):
+    global estado_juego, jugadores_global, crupier_global, mensajes_resultados
+    estado_juego = "configuracion"
+    jugadores_global.clear()
+    crupier_global = None
+    mensajes_resultados.clear()
+    actualizar_pantalla()
+
+def cerrar_mesa(ev):
+    document["pantalla-despedida"].classList.remove("hidden")
+
+def actualizar_pantalla():
+    global estado_juego, jugadores_global, crupier_global, indice_jugador_activo, mensajes_resultados
+    
+    # 1. Alternar sección de configuración vs juego y botones de cabecera
+    if estado_juego == "configuracion":
+        document["sec-configuracion"].classList.remove("hidden")
+        document["sec-juego"].classList.add("hidden")
+        document["btn-reiniciar-juego-completo"].classList.add("hidden")
+        document["btn-cerrar-mesa"].classList.add("hidden")
+        return
+        
+    document["sec-configuracion"].classList.add("hidden")
+    document["sec-juego"].classList.remove("hidden")
+    document["btn-reiniciar-juego-completo"].classList.remove("hidden")
+    document["btn-cerrar-mesa"].classList.remove("hidden")
+    
+    # 2. Renderizar Crupier
+    ocultar_crupier = (estado_juego == "jugando" or estado_juego == "apuestas")
+    crupier_cartas_div = document["crupier-cartas"]
+    crupier_cartas_div.html = ""
+    
+    for i, carta in enumerate(crupier_global.mano):
+        crupier_cartas_div.html += carta.obtener_html_carta(oculta=(i == 0 and ocultar_crupier))
+        
+    if len(crupier_global.mano) == 0:
+        document["crupier-puntos"].text = "Puntos: 0"
+    elif ocultar_crupier:
+        if len(crupier_global.mano) > 1:
+            valor_visible = crupier_global.mano[1].obtener_valor_numerico()
+            document["crupier-puntos"].text = f"Visible: {valor_visible} + [Oculta]"
+        else:
+            document["crupier-puntos"].text = "Visible: [Carta Oculta]"
+    else:
+        document["crupier-puntos"].text = f"Puntos: {crupier_global.puntuacion}"
+
+    # 3. Controlar visibilidad de paneles de acciones
+    document["controles-apuestas"].classList.add("hidden")
+    document["controles-turno"].classList.add("hidden")
+    document["controles-resultados"].classList.add("hidden")
+
+    if estado_juego == "apuestas":
+        document["controles-apuestas"].classList.remove("hidden")
+        container = document["inputs-apuestas"]
+        container.html = ""
+        for i, j in enumerate(jugadores_global):
+            container.html += f'''
+                <div class="flex items-center justify-between bg-green-950 p-3 rounded-lg border border-green-800">
+                    <div>
+                        <span class="font-bold text-gray-200 block text-sm">{j.nombre}</span>
+                        <span class="text-xs text-green-400">Saldo: ${j.saldo_disponible:.2f}</span>
+                    </div>
+                    <div class="flex items-center">
+                        <span class="text-sm font-bold text-yellow-500 mr-2">$</span>
+                        <input id="apuesta-input-{i}" type="number" value="100" min="1" max="{j.saldo_disponible}"
+                               onchange="validarApuestaJs(this, {j.saldo_disponible})"
+                               class="w-24 bg-green-900 border border-green-600 rounded px-2 py-1 text-center text-white focus:outline-none focus:border-yellow-400 text-sm font-bold" />
+                    </div>
+                </div>
+            '''
+            
+    elif estado_juego == "jugando":
+        document["controles-turno"].classList.remove("hidden")
+        j_activo = jugadores_global[indice_jugador_activo]
+        document["nombre-jugador-activo"].text = j_activo.nombre
+        
+        # Mostrar botones dinámicos doblar/rendirse si tiene 2 cartas
+        tiene_2_cartas = len(j_activo.mano) == 2
+        btn_doblar = document["btn-doblar"]
+        btn_rendirse = document["btn-rendirse"]
+        
+        if tiene_2_cartas and j_activo.saldo_disponible >= j_activo.apuesta_actual:
+            btn_doblar.classList.remove("hidden")
+        else:
+            btn_doblar.classList.add("hidden")
+            
+        if tiene_2_cartas:
+            btn_rendirse.classList.remove("hidden")
+        else:
+            btn_rendirse.classList.add("hidden")
+            
+    elif estado_juego == "resultados":
+        document["controles-resultados"].classList.remove("hidden")
+
+    # 4. Renderizar paneles de Jugadores en la mesa
+    jugadores_div = document["contenedor-jugadores"]
+    jugadores_div.html = ""
+    
+    for i, j in enumerate(jugadores_global):
+        es_activo = (estado_juego == "jugando" and indice_jugador_activo == i)
+        border_clase = "border-2 border-green-400 bg-green-950 bg-opacity-40" if es_activo else "border border-green-950 bg-black bg-opacity-40"
+        
+        html_cartas = ""
+        for carta in j.mano:
+            html_cartas += carta.obtener_html_carta()
+            
+        if not html_cartas:
+            html_cartas = '<span class="text-xs text-gray-600">Aún sin cartas</span>'
+            
+        resultado_html = ""
+        if estado_juego == "resultados" and j.nombre in mensajes_resultados:
+            msg = mensajes_resultados[j.nombre]
+            color_clase = "text-yellow-400"
+            if "Ganaste" in msg or "BlackJack" in msg:
+                color_clase = "text-green-400 font-extrabold"
+            elif "Perdiste" in msg or "pasaste" in msg:
+                color_clase = "text-red-400"
+            resultado_html = f'''
+                <div class="mt-4 p-2 bg-black bg-opacity-60 rounded border border-green-900 text-xs {color_clase}">
+                    {msg}
+                </div>
+            '''
+
+        jugadores_div.html += f'''
+            <div class="p-5 rounded-2xl shadow-xl flex flex-col justify-between {border_clase}">
+                <div>
+                    <div class="flex justify-between items-center mb-3">
+                        <div>
+                            <h4 class="font-extrabold text-md flex items-center">
+                                {j.nombre} 
+                                {'<span class="ml-2 px-1.5 py-0.5 bg-green-500 text-black text-[9px] font-bold rounded">TURNO</span>' if es_activo else ''}
+                            </h4>
+                            <span class="text-xs text-green-400">Saldo: ${j.saldo_disponible:.2f}</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="block text-xs text-gray-400">Apuesta: ${j.apuesta_actual:.2f}</span>
+                            <span class="text-xs bg-green-900 px-2 py-0.5 rounded font-bold font-mono">Pts: {j.puntuacion}</span>
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap gap-2 justify-center min-h-[120px] items-center border border-dashed border-green-950 p-2 rounded-xl bg-black bg-opacity-20">
+                        {html_cartas}
+                    </div>
+                </div>
+                {resultado_html}
+            </div>
+        '''
+
+# Vincular eventos a funciones en Python
+document["btn-iniciar-juego"].bind("click", inicializar_juego)
+document["btn-confirmar-apuestas"].bind("click", enviar_apuestas)
+document["btn-pedir"].bind("click", jugar_accion)
+document["btn-plantarse"].bind("click", jugar_accion)
+document["btn-doblar"].bind("click", jugar_accion)
+document["btn-rendirse"].bind("click", jugar_accion)
+document["btn-reiniciar-ronda"].bind("click", reiniciar_ronda)
+document["btn-reiniciar-juego-completo"].bind("click", reiniciar_juego_completo)
+document["btn-cerrar-mesa"].bind("click", cerrar_mesa)
+    </script>
+</body>
+</html>
